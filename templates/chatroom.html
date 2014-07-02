@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>OneRoom Chat</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="/assets/css/chatroom.css" />
+    </head>
+    <body>
+        <header>One Room
+            <span id="totalClients">{{ totalClients }} Users</span>
+        </header>
+        <section id="chatBox">
+            <ul id="chatBoxList">
+                <li>
+                Welcome to OneRoom. A hopefully ridiculously simple and easy to build chatroom on Google App Engine.
+                <br />
+                <br />
+                There were {{ totalClients }} user(s) in this room when you entered.
+                </li>
+                
+            </ul>
+        </section>
+        <footer id="message">
+            <textarea id="textMessage" name="message" placeholder="Type message here and press Enter to send" rows="1"></textarea>
+        </footer>
+
+
+
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+        
+        <script src="/assets/js/jquery-ext.js"></script>
+        <script src="/assets/js/chatroom.js"></script>
+        <script type="text/javascript" src="/_ah/channel/jsapi"></script>
+        <script  type="text/javascript">
+            var channelToken = '{{ token }}'; //this is the channel token
+            var channelId = '{{ channel_id }}';
+            var clientSeq = '{{ clientSeq }}';
+            console.log(channelToken,channelId);
+        </script>
+
+    </body>
+</html>
