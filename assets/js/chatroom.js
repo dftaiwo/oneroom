@@ -119,10 +119,13 @@ $('#textMessage').pressEnter(function() {
 });
 
 function addMessageToChat(messageData,msgTimeStamp) {
+        
+
         var htmlToView = [];
         var message = messageData.msg;
         if(typeof(msgTimeStamp)=='undefined'){
                 htmlToView.push('<li>');
+                playChatSound();
         }else{//This came from me
                 htmlToView.push('<li class="pending" id="msg'+msgTimeStamp+'">');
         }
@@ -141,7 +144,11 @@ function addMessageToChat(messageData,msgTimeStamp) {
         var height = $chatBoxContainer[0].scrollHeight;
         //$chatBoxContainer.scrollTop(height);//1E10?
         $chatBoxContainer.animate({"scrollTop": height}, "slow");
+        
+}
 
+function playChatSound(){
+        $('#audioStreams')[0].play();
 }
 
 function sendToServer(messageToSend,msgTimeStamp) {

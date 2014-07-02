@@ -160,13 +160,12 @@ class UserConnected(webapp2.RequestHandler):
 		scene = scene_k.get()
 		send_client_list(scene.connections)
 
-
 def requireAuth(self):
 	
 	currentUser = users.get_current_user()
 	if currentUser:
  		userId = currentUser.user_id();
- 		memcache.add(key=userId, value=currentUser.nickname(), time=32800);
+ 		memcache.add(key=userId, value=currentUser.nickname(), time=21600);
 		return currentUser;
 	else:
 		self.redirect('/login',False,True)
@@ -177,9 +176,9 @@ class LoginHandler(webapp2.RequestHandler):
 		googleLoginUrl = users.create_login_url('/');
 		
 		template_values = {
-								'googleLoginUrl' : googleLoginUrl,
-								
-						}
+					'googleLoginUrl' : googleLoginUrl,
+							
+			}
 		path = os.path.join(os.path.dirname(__file__), "templates/login.html")
 		self.response.out.write(template.render(path, template_values));
 		
