@@ -9,11 +9,14 @@
     <body>
         <header>One Room
             <span id="totalClients">{{ totalClients }} Users</span>
+            <span>|</span> 
+            <span><a href="{{ logoutUrl }}">Logout</a></span>
         </header>
         <section id="chatBox">
             <ul id="chatBoxList">
                 <li>
-                Welcome to OneRoom. A hopefully ridiculously simple and easy to build chatroom on Google App Engine.
+                Welcome to OneRoom. 
+                A hopefully ridiculously simple and easy to build chatroom on Google App Engine.
                 <br />
                 <br />
                 There were {{ totalClients }} user(s) in this room when you entered.
@@ -25,8 +28,6 @@
             <textarea id="textMessage" name="message" placeholder="Type message here and press Enter to send" rows="1"></textarea>
         </footer>
 
-
-
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
         
         <script src="/assets/js/jquery-ext.js"></script>
@@ -36,7 +37,10 @@
             var channelToken = '{{ token }}'; //this is the channel token
             var channelId = '{{ channel_id }}';
             var clientSeq = '{{ clientSeq }}';
+//            var myNickName = '{{ nickName }}';
+            var myNickName = 'Me';
             console.log(channelToken,channelId);
+            
         </script>
 
     </body>

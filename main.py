@@ -22,6 +22,8 @@ from google.appengine.api.channel.channel import InvalidMessageError, \
 from google.appengine.ext import db
 from google.appengine.ext import ndb
 from google.appengine.ext.webapp import template
+from google.appengine.ext.webapp.util import login_required
+from google.appengine.api import users
 
 from datetime import datetime
 from datetime import timedelta
@@ -34,15 +36,15 @@ import string
 import time
 from libs import xss
 
-
 				
 def send_client_list(connections):
 	clients = []
 	for c in connections:
 		clients.append(c.channel_id)
 	message = json.dumps({
-		'type' : 'client_list',
-		'clients' : clients
+		'type' : 'clientsList',
+		'clients' : clients,
+		'totalClients': len(clients),
 	})
 	for c in connections:
 		channel.send_message(c.channel_id, message)
@@ -76,9 +78,10 @@ class Scene(ndb.Model):
 	
 class UserMessage(webapp2.RequestHandler):
 	def post(self):
+		currentUser = requireAuth(self);
 		channel_id = self.request.get('channel_id');
 		clientSeq = self.request.get('client_seq');
-		timestamp = self.request.get('timestamp');
+		msgTimeStamp = self.request.get('timestamp');
 		msg = self.request.get('msg');
 		
 		xssCleaner = xss.XssCleaner();#get rid of potentially harmful code
@@ -95,8 +98,8 @@ class UserMessage(webapp2.RequestHandler):
 		self.response.out.write(json.dumps(
 						{
 						'posted':True,
-						'totalClients':totalClients
-						
+						'totalClients':totalClients,
+						'msgTimeStamp':msgTimeStamp
 						}
 				));
 		
@@ -106,12 +109,13 @@ class UserMessage(webapp2.RequestHandler):
 		message = json.dumps({
 					'type' : 'newMessage',
 					'sequence' : sequence,
-					'timestamp' : timestamp,
+					'timestamp' : msgTimeStamp,
 					'clientSeq' : clientSeq,
 					'channel_id' : channel_id,
 					'msg' : msg,
 					'totalClients':totalClients,
-					'server_time' : int(time.time() * 1000)
+					'server_time' : int(time.time() * 1000),
+					'senderName':currentUser.nickname()
 				});
 		tStart = datetime.now()
 		channel.send_message(channel_id, message)
@@ -157,62 +161,73 @@ class UserConnected(webapp2.RequestHandler):
 		send_client_list(scene.connections)
 
 
-class MainHandler(webapp2.RequestHandler):
+def requireAuth(self):
+	
+	currentUser = users.get_current_user()
+	if currentUser:
+ 		userId = currentUser.user_id();
+ 		memcache.add(key=userId, value=currentUser.nickname(), time=32800);
+		return currentUser;
+	else:
+		self.redirect('/login',False,True)
+
+class LoginHandler(webapp2.RequestHandler):
 	def get(self):
-		try:
-			channel_id = "";
-			token = "";
-			try:
-				scene_k = ndb.Key('Scene', 'scene1')
-				scene = scene_k.get()
-				if scene is None:
-					logging.info('MainHandler creating Scene')
-					scene = Scene(name='Scene 1', id='scene1')
 		
-				# take this opportunity to cull expired channels
-				removed = remove_expired_connections(scene.connections)
-				if removed:
-					send_client_list(scene.connections)
+		googleLoginUrl = users.create_login_url('/');
 		
-				channel_id = str(scene.next_id)
-				scene.next_id += 1
-				scene.connections.append(Connection(channel_id=channel_id))
-				token = channel.create_channel(channel_id,duration_minutes=300)
-				scene.put()
-				logging.info('MainHandler channel_id=%s' % channel_id)
-			except:
-				pass
-			try:
-				path = os.path.join(os.path.dirname(__file__), "templates/chatroom.html")
-				
-				template_values = {
-										'token' : token,
-										'channel_id' : channel_id,
-										'clientSeq':id_generator(15),
-										'totalClients': len(scene.connections)
-		
-								}
-				
-				self.response.out.write(template.render(path, template_values));
-				return;
-			except:
-				pass
-		except:
-			pass
 		template_values = {
-								'token' : "",
-								'channel_id' :"",
+								'googleLoginUrl' : googleLoginUrl,
 								
 						}
-		path = os.path.join(os.path.dirname(__file__), "templates/error.html")
+		path = os.path.join(os.path.dirname(__file__), "templates/login.html")
 		self.response.out.write(template.render(path, template_values));
+		
+		
+class MainHandler(webapp2.RequestHandler):
+	
+	def get(self):
+		currentUser = requireAuth(self);
+		channel_id = "";
+		token = "";
+		scene_k = ndb.Key('Scene', 'scene1')
+		scene = scene_k.get()
+		if scene is None:
+			logging.info('MainHandler creating Scene')
+			scene = Scene(name='Scene 1', id='scene1')
 
+		# take this opportunity to cull expired channels
+		removed = remove_expired_connections(scene.connections)
+		if removed:
+			send_client_list(scene.connections)
+
+		channel_id = str(scene.next_id)
+		scene.next_id += 1
+		scene.connections.append(Connection(channel_id=channel_id))
+		token = channel.create_channel(channel_id,duration_minutes=300)
+		scene.put()
+		logging.info('MainHandler channel_id=%s' % channel_id)
+	
+		logOutUrl = users.create_logout_url('/');
+		
+		
+		template_values = {
+								'token' : token,
+								'channel_id' : channel_id,
+								'clientSeq':currentUser.user_id(),
+								'totalClients': len(scene.connections),
+								'nickName':currentUser.nickname(),
+								'logoutUrl':logOutUrl
+						}
+		path = os.path.join(os.path.dirname(__file__), "templates/chatroom.html")
+		self.response.out.write(template.render(path, template_values));
+		
 	
 
 app = webapp2.WSGIApplication([
-    ('/main', MainHandler),
     ('/', MainHandler),
+    ('/login',LoginHandler),
     ('/message', UserMessage),
     ('/_ah/channel/connected/', UserConnected),
     ('/_ah/channel/disconnected/', UserDisconnected)
-    ], debug=False)
+    ], debug=True)

@@ -1,6 +1,5 @@
 var debugMode = true;
 var outgoingMessages = {};
-
 if (typeof (console) == "undefined") {
         window.console = {
                 log: function() {
@@ -10,7 +9,7 @@ if (typeof (console) == "undefined") {
 }
 var message_handlers = {
         'echo': handleDirectPrint,
-        'client_list': handleClientList,
+        'clientsList': handleClientList,
         'newMessage': handleNewMessage,
         'refreshCall': handleRefreshCall,
 }
@@ -57,14 +56,19 @@ $().ready(function() {
 function handleDirectPrint(msg) {
         logMessage(msg);
 }
-function handleNewMessage(data) {
+function updateClientsList(data){
         var totalClients = data.totalClients;
         $('#totalClients').html(totalClients+' Users');
-        if(data.clientSeq==clientSeq) {//because I sent this message
+}
+function handleNewMessage(data) {
+        
+        updateClientsList(data);
+        
+        if(data.clientSeq==clientSeq && data.channel_id==channelId) {//because I sent this message
                 logMessage('Message has gone around the world!');
                 return;
         }
-        addMessageToChat(data.msg);
+        addMessageToChat(data);
 }
 ;
 function handleRefreshCall(data) {
@@ -83,6 +87,7 @@ function handleClientList(msg) {
         }
 //                                element.innerHTML = str;
         logMessage("RECV client_list [" + str + "]");
+        updateClientsList(msg);
 }
 
 function logMessage(msg, msg2) {
@@ -103,16 +108,30 @@ $('#textMessage').pressEnter(function() {
                 return;
         }
         $('#textMessage').val("");
-        addMessageToChat(messageToSend);
-        sendToServer(messageToSend);
+        var msgTimeStamp = getTimestamp();
+        var messageData = {
+                msg:messageToSend,
+                senderName:myNickName
+        }
+        addMessageToChat(messageData,msgTimeStamp);
+        sendToServer(messageToSend,msgTimeStamp);
 
 });
 
-function addMessageToChat(message) {
+function addMessageToChat(messageData,msgTimeStamp) {
         var htmlToView = [];
-        htmlToView.push('<li>');
+        var message = messageData.msg;
+        if(typeof(msgTimeStamp)=='undefined'){
+                htmlToView.push('<li>');
+        }else{//This came from me
+                htmlToView.push('<li class="pending" id="msg'+msgTimeStamp+'">');
+        }
         htmlToView.push('<img src="/assets/img/avatar-02.svg" align="left" />');
         htmlToView.push(message);
+        htmlToView.push('<author>');
+        htmlToView.push(messageData.senderName);
+        htmlToView.push('</author>');
+        htmlToView.push('<span></span>');
         htmlToView.push('</li>');
 
         $('#chatBoxList').append(htmlToView.join("\n"));
@@ -125,12 +144,12 @@ function addMessageToChat(message) {
 
 }
 
-function sendToServer(messageToSend) {
+function sendToServer(messageToSend,msgTimeStamp) {
 //        outgoingMessages.append(messageToSend);
         var requestParams = {
                 channel_id: channelId,
                 client_seq: clientSeq,
-                timestamp: getTimestamp(),
+                timestamp: msgTimeStamp,
                 msg: messageToSend
         }
 
@@ -143,9 +162,11 @@ function sendToServer(messageToSend) {
                 success: function(data, textStatus, jqXHR)
                 {
                         console.log(data);
+                        window.setTimeout(function(){
+                                $('#msg'+msgTimeStamp).removeClass('pending');
+                        },500);
                 },
-                error: function(jqXHR, textStatus, errorThrown)
-                {
+                error: function(jqXHR, textStatus, errorThrown){
                         console.log(errorThrown,textStatus);
                 }
         });

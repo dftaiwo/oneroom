@@ -57,11 +57,29 @@ header{
     clear:both;
 }
 
-li img {
+#chatBoxList li img {
     border-radius: 50%;
     margin-right: 10px;
     width:48px;
 }
+#chatBoxList li author{
+    display:block;
+    margin-top:10px;
+    margin-right:-10px;
+    float:right;
+    background:#eee;
+    padding:3px 5px;
+    font-size:0.9em;
+    box-shadow: 0px 0px 2px #ccc;
+    
+}
+#chatBoxList li span{
+
+    clear:both;
+    
+}
+
+
 footer{
     position:fixed;
     bottom:0;
@@ -72,10 +90,9 @@ footer{
     margin-left:2px;
     margin-right:5px;
 }
+
 textarea{
     width:100%;
-
-
     height:40px;
     border:0;
     font-size:1rem;
@@ -90,11 +107,23 @@ textarea:focus {
     margin-top:-1rem;
     outline:1px solid #ccc;
 }
-#totalClients{
+
+header span{
     display:block;
     float:left;
     font-size:0.6em;
     padding-top:6px;
+    padding-left:5px;
+}
+
+header span a{
+    font-size:1em;
+    color:#fff;
+    text-decoration: none;
+}
+.pending{
+    font-style:  italic;
+    color:#666;
 }
 
 
