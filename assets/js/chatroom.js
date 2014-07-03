@@ -16,9 +16,15 @@ var message_handlers = {
 var connected = false,
         clientSequence = 0,
         clientSequences = [];
+var channel;
+var autoConnect = true;
 
 $().ready(function() {
-        var channel = new goog.appengine.Channel(channelToken);
+        connectChannel();
+});
+
+function connectChannel(){
+         channel = new goog.appengine.Channel(channelToken);
         logMessage("Connecting to server...");
         channel.open({
                 onopen: function() {
@@ -48,10 +54,10 @@ $().ready(function() {
                         logMessage("Disconnected from [" + channelId + "]");
                         logMessage("===============================================");
                         //Should I refresh?
+                        if(autoConnect) connectChannel();
                 }
         });
-
-});
+}
 
 function handleDirectPrint(msg) {
         logMessage(msg);

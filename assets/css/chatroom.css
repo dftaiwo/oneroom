@@ -55,6 +55,7 @@ header{
     padding:8px 10px;
     min-height:50px;
     clear:both;
+    overflow: scroll;
 }
 
 #chatBoxList li img {
