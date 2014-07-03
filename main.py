@@ -36,8 +36,6 @@ import string
 import time
 from libs import xss
 
-from oauth2client import client
-from apiclient import sample_tools
 				
 def send_client_list(connections):
 	clients = []

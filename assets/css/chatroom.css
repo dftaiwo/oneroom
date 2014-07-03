@@ -82,6 +82,7 @@ header{
 
 
 footer{
+    
     position:fixed;
     bottom:0;
     margin-bottom: 0;
@@ -90,10 +91,11 @@ footer{
     width:390px;
     margin-left:2px;
     margin-right:5px;
+    
 }
 
-textarea{
-    width:100%;
+textarea {
+    width:97%;
     height:40px;
     border:0;
     font-size:1rem;
