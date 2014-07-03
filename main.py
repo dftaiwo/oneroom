@@ -36,6 +36,7 @@ import string
 import time
 from libs import xss
 
+from apiclient import sample_tools
 				
 def send_client_list(connections):
 	clients = []
@@ -161,14 +162,20 @@ class UserConnected(webapp2.RequestHandler):
 		send_client_list(scene.connections)
 
 def requireAuth(self):
-	
-	currentUser = users.get_current_user()
-	if currentUser:
- 		userId = currentUser.user_id();
- 		memcache.add(key=userId, value=currentUser.nickname(), time=21600);
-		return currentUser;
-	else:
-		self.redirect('/login',False,True)
+	argv=[]
+	service, flags = sample_tools.init(
+	argv, 'plus', 'v1', __doc__, __file__,
+	scope='https://www.googleapis.com/auth/plus.me')
+	people_resource = service.people()
+	people_document = people_resource.get(userId='me').execute()
+	self.response.out.write("Hello");
+# 	currentUser = users.get_current_user()
+# 	if currentUser:
+#  		userId = currentUser.user_id();
+#  		memcache.add(key=userId, value=currentUser.nickname(), time=21600);
+# 		return currentUser;
+# 	else:
+# 		self.redirect('/login',False,True)
 
 class LoginHandler(webapp2.RequestHandler):
 	def get(self):

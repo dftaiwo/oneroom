@@ -19,12 +19,9 @@ var connected = false,
 var channel;
 var autoConnect = true;
 
-$().ready(function() {
-        connectChannel();
-});
+function connectChannel() {
 
-function connectChannel(){
-         channel = new goog.appengine.Channel(channelToken);
+        channel = new goog.appengine.Channel(channelToken);
         logMessage("Connecting to server...");
         channel.open({
                 onopen: function() {
@@ -54,7 +51,8 @@ function connectChannel(){
                         logMessage("Disconnected from [" + channelId + "]");
                         logMessage("===============================================");
                         //Should I refresh?
-                        if(autoConnect) connectChannel();
+                        if (autoConnect)
+                                connectChannel();
                 }
         });
 }
@@ -62,15 +60,15 @@ function connectChannel(){
 function handleDirectPrint(msg) {
         logMessage(msg);
 }
-function updateClientsList(data){
+function updateClientsList(data) {
         var totalClients = data.totalClients;
-        $('#totalClients').html(totalClients+' Users');
+        $('#totalClients').html(totalClients + ' Users');
 }
 function handleNewMessage(data) {
-        
+
         updateClientsList(data);
-        
-        if(data.clientSeq==clientSeq && data.channel_id==channelId) {//because I sent this message
+
+        if (data.clientSeq == clientSeq && data.channel_id == channelId) {//because I sent this message
                 logMessage('Message has gone around the world!');
                 return;
         }
@@ -116,24 +114,24 @@ $('#textMessage').pressEnter(function() {
         $('#textMessage').val("");
         var msgTimeStamp = getTimestamp();
         var messageData = {
-                msg:messageToSend,
-                senderName:myNickName
+                msg: messageToSend,
+                senderName: myNickName
         }
-        addMessageToChat(messageData,msgTimeStamp);
-        sendToServer(messageToSend,msgTimeStamp);
+        addMessageToChat(messageData, msgTimeStamp);
+        sendToServer(messageToSend, msgTimeStamp);
 
 });
 
-function addMessageToChat(messageData,msgTimeStamp) {
-        
+function addMessageToChat(messageData, msgTimeStamp) {
+
 
         var htmlToView = [];
         var message = messageData.msg;
-        if(typeof(msgTimeStamp)=='undefined'){
+        if (typeof (msgTimeStamp) == 'undefined') {
                 htmlToView.push('<li>');
                 playChatSound();
-        }else{//This came from me
-                htmlToView.push('<li class="pending" id="msg'+msgTimeStamp+'">');
+        } else {//This came from me
+                htmlToView.push('<li class="pending" id="msg' + msgTimeStamp + '">');
         }
         htmlToView.push('<img src="/assets/img/avatar-02.svg" align="left" />');
         htmlToView.push(message);
@@ -150,14 +148,14 @@ function addMessageToChat(messageData,msgTimeStamp) {
         var height = $chatBoxContainer[0].scrollHeight;
         //$chatBoxContainer.scrollTop(height);//1E10?
         $chatBoxContainer.animate({"scrollTop": height}, "slow");
-        
+
 }
 
-function playChatSound(){
+function playChatSound() {
         $('#audioStreams')[0].play();
 }
 
-function sendToServer(messageToSend,msgTimeStamp) {
+function sendToServer(messageToSend, msgTimeStamp) {
 //        outgoingMessages.append(messageToSend);
         var requestParams = {
                 channel_id: channelId,
@@ -175,16 +173,34 @@ function sendToServer(messageToSend,msgTimeStamp) {
                 success: function(data, textStatus, jqXHR)
                 {
                         console.log(data);
-                        window.setTimeout(function(){
-                                $('#msg'+msgTimeStamp).removeClass('pending');
-                        },500);
+                        window.setTimeout(function() {
+                                $('#msg' + msgTimeStamp).removeClass('pending');
+                        }, 500);
                 },
-                error: function(jqXHR, textStatus, errorThrown){
-                        console.log(errorThrown,textStatus);
+                error: function(jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown, textStatus);
                 }
         });
 }
 
-function getTimestamp(){
-        return Math.floor(+new Date()/1000);       
+function getTimestamp() {
+        return Math.floor(+new Date() / 1000);
+}
+
+
+
+function signinCallback(authResult) {
+        if (authResult['status']['signed_in']) {
+                console.log('This user is signed in');
+                // Update the app to reflect a signed in user
+                // Hide the sign-in button now that the user is authorized, for example:
+                document.getElementById('signinButton').setAttribute('style', 'display: none');
+        } else {
+                // Update the app to reflect a signed out user
+                // Possible error values:
+                //   "user_signed_out" - User is signed-out
+                //   "access_denied" - User denied access to your app
+                //   "immediate_failed" - Could not automatically log in the user
+                console.log('Sign-in state: ' + authResult['error']);
+        }
 }

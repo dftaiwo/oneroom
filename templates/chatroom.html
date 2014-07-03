@@ -32,7 +32,7 @@
             <source src="/assets/audio/msg.ogg" type="audio/ogg">
             <source src="/assets/audio/msg.mp3" type="audio/mpeg">
             <source src="/assets/audio/msg.wav" type="audio/wav">
-        </audio>'
+        </audio>
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
         <script src="/assets/js/jquery-ext.js"></script>
         <script src="/assets/js/chatroom.js"></script>
@@ -41,10 +41,13 @@
             var channelToken = '{{ token }}'; //this is the channel token
             var channelId = '{{ channel_id }}';
             var clientSeq = '{{ clientSeq }}';
-//            var myNickName = '{{ nickName }}';
+//        var myNickName = '{{ nickName }}';
             var myNickName = 'Me';
-            console.log(channelToken,channelId);
             
+            
+            $().ready(function() {
+                    connectChannel();
+            });
         </script>
 
     </body>
