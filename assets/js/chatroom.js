@@ -1,5 +1,7 @@
 var debugMode = true;
 var outgoingMessages = {};
+var myNickname='Me';
+var isConnected = false;
 if (typeof (console) == "undefined") {
         window.console = {
                 log: function() {
@@ -23,8 +25,9 @@ var globalChannelParams = {};
 
 
 function setChannelParams(channelParams) {
+        logMessage("Setting channel Params", channelParams);
         globalChannelParams = channelParams;
-
+        myNickname = channelParams.myNickname;
 }
 function getChannelParams() {
         return globalChannelParams;
@@ -41,6 +44,7 @@ function connectChannel() {
                         connected = true;
                         logMessage("===============================================");
                         logMessage("Connected to [" +getChannelId() + "]");
+                        setConnectionStatus(true);
                 },
                 onmessage: function(msg) {
                         var data = jQuery.parseJSON(msg.data),
@@ -62,6 +66,8 @@ function connectChannel() {
                 onclose: function() {
                         connected = false;
                         logMessage("Disconnected from [" + getChannelId() + "]");
+                        setConnectionStatus(false);
+
                         logMessage("===============================================");
                         //Should I refresh?
                         if (autoConnect)
@@ -80,6 +86,7 @@ function updateClientsList(data) {
 function handleNewMessage(data) {
 
         updateClientsList(data);
+        console.log(data);
         if (data.client_seq == getClientSeq() && data.channel_id == getChannelId()) {//because I sent this message
                 logMessage('Message has gone around the world!');
                 return;
@@ -117,7 +124,12 @@ function logMessage(msg, msg2) {
 
 
 $('#textMessage').pressEnter(function() {
-
+        if(!isConnected){
+                
+                showMessage("Disconnected. Click Ok to reconnect");
+                reconnectChannel();
+                return;
+        }
         var messageToSend = $('#textMessage').val();
         messageToSend = messageToSend.trim();
         if (!messageToSend) {
@@ -127,7 +139,8 @@ $('#textMessage').pressEnter(function() {
         var msgTimeStamp = getTimestamp();
         var messageData = {
                 msg: messageToSend,
-                senderName: myNickName
+                senderName: myNickname,
+                site_id:getSiteId(),
         }
         addMessageToChat(messageData, msgTimeStamp);
         sendToServer(messageToSend, msgTimeStamp);
@@ -169,15 +182,16 @@ function playChatSound() {
 
 function sendToServer(messageToSend, msgTimeStamp) {
 //        outgoingMessages.append(messageToSend);
-
+        
         var requestParams = {
                 channel_id: getChannelId(),
                 client_seq: getClientSeq(),
                 timestamp: msgTimeStamp,
+                site_id:getSiteId(), 
                 msg: messageToSend
         }
 
-        //logMessage(requestParams);
+        logMessage(requestParams);
         $.ajax({
                 url: "/message",
                 type: "POST",
@@ -213,7 +227,6 @@ function reconnectChannel() {
                 success: function(data, textStatus, jqXHR)
                 {
                         //logMessage(data);
-                        
                         channelParams = {
                                 channelToken: data.result.token,
                                 channelId: data.result.channel_id,
@@ -242,4 +255,16 @@ function getChannelId(){
 function getClientSeq(){
         channelParams = getChannelParams();
         return channelParams.clientSeq;
+}
+function getSiteId(){
+        channelParams = getChannelParams();
+        return channelParams.siteId;
+}
+
+function setConnectionStatus(status){
+        isConnected = status;
+}
+
+function showMessage(msg){
+        alert(msg);
 }

@@ -80,6 +80,7 @@ class UserMessage(webapp2.RequestHandler):
 	def post(self):
 		currentUser = requireAuth(self);
 		channel_id = self.request.get('channel_id');
+		siteId  = self.request.get('site_id');
 		clientSeq = self.request.get('client_seq');
 		msgTimeStamp = self.request.get('timestamp');
 		msg = self.request.get('msg');
@@ -92,8 +93,13 @@ class UserMessage(webapp2.RequestHandler):
 		
 		if sequence is None:
 			sequence = 0
-		scene_k = ndb.Key('Scene', 'scene1')
+		clientKey = getClientKey(siteId);
+		scene_k = ndb.Key('Scene', clientKey);
 		scene = scene_k.get()
+# 		if scene is None:
+# 			logging.info('MainHandler creating Scene')
+# 			scene = Scene(name='Scene {0}'.format(siteId), id=clientKey)
+
 		totalClients = len(scene.connections)
 		self.response.out.write(json.dumps(
 						{
@@ -115,6 +121,7 @@ class UserMessage(webapp2.RequestHandler):
 					'msg' : msg,
 					'totalClients':totalClients,
 					'server_time' : int(time.time() * 1000),
+					'site_id':siteId,
 					'senderName':currentUser.nickname()
 				});
 		tStart = datetime.now()
@@ -222,21 +229,18 @@ class ChatJs(webapp2.RequestHandler):#this should generate a js file just for th
 		
 		
 		template_values = {
-								'token' : token,
-								'channel_id' : channel_id,
-								'client_seq':"23",
+								'channelToken' : token,
+								'channelId' : channel_id,
+								'client_seq':channel_id,
 								'totalClients': len(scene.connections),
-								'nickName':"asdad",
+								'myNickName':"Me",
+								'siteId':siteId,
 								'logoutUrl':logOutUrl
 						}
-		jsVariables = []
-		jsVariables.append("var channelToken='{0}'".format(token));
-		jsVariables.append("var channelId='{0}'".format(channel_id));
-		jsVariables.append("var client_seq='{0}'".format("some"));
-		jsVariables.append("var myNickName='{0}'".format("Me"));
-# 		jsVariables.append("alert('hi');");
+		
+		path = os.path.join(os.path.dirname(__file__), "templates/config.js")
 		self.response.headers['Content-Type'] = 'application/javascript'
-		self.response.out.write(";\n".join(jsVariables));	
+		self.response.out.write(template.render(path, template_values));
 
 class RefreshToken(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
 	def post(self):
@@ -280,39 +284,39 @@ class MainHandler(webapp2.RequestHandler):
 	def get(self):
  		currentUser = requireAuth(self);
 		
-		channel_id = "";
-		token = "";
-		scene_k = ndb.Key('Scene', 'scene1')
-		scene = scene_k.get()
-		if scene is None:
-			logging.info('MainHandler creating Scene')
-			scene = Scene(name='Scene 1', id='scene1')
-
-		# take this opportunity to cull expired channels
-		removed = remove_expired_connections(scene.connections)
-		if removed:
-			send_client_list(scene.connections)
-
-		channel_id = str(scene.next_id)
-		scene.next_id += 1
-		scene.connections.append(Connection(channel_id=channel_id))
-		token = channel.create_channel(channel_id,duration_minutes=30)
-		scene.put()
-		logging.info('MainHandler channel_id=%s' % channel_id)
-	
-		logOutUrl = users.create_logout_url('/');
-		
-		
-		template_values = {
-								'token' : token,
-								'channel_id' : channel_id,
-								'client_seq':currentUser.user_id(),
-								'totalClients': len(scene.connections),
-								'nickName':currentUser.nickname(),
-								'logoutUrl':logOutUrl
-						}
+# 		channel_id = "";
+# 		token = "";
+# 		scene_k = ndb.Key('Scene', 'scene1')
+# 		scene = scene_k.get()
+# 		if scene is None:
+# 			logging.info('MainHandler creating Scene')
+# 			scene = Scene(name='Scene 1', id='scene1')
+# 
+# 		# take this opportunity to cull expired channels
+# 		removed = remove_expired_connections(scene.connections)
+# 		if removed:
+# 			send_client_list(scene.connections)
+# 
+# 		channel_id = str(scene.next_id)
+# 		scene.next_id += 1
+# 		scene.connections.append(Connection(channel_id=channel_id))
+# 		token = channel.create_channel(channel_id,duration_minutes=30)
+# 		scene.put()
+# 		logging.info('MainHandler channel_id=%s' % channel_id)
+# 	
+# 		logOutUrl = users.create_logout_url('/');
+# 		
+# 		
+# 		template_values = {
+# 								'token' : token,
+# 								'channel_id' : channel_id,
+# 								'client_seq':currentUser.user_id(),
+# 								'totalClients': len(scene.connections),
+# 								'nickName':currentUser.nickname(),
+# 								'logoutUrl':logOutUrl
+# 						}
 		path = os.path.join(os.path.dirname(__file__), "templates/chatroom.html")
-		self.response.out.write(template.render(path, template_values));
+		self.response.out.write(template.render(path, {}));
 		
 	
 
