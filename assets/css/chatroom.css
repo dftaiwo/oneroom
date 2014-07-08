@@ -81,7 +81,7 @@ header{
 }
 
 
-footer{
+footer {
     
     position:fixed;
     bottom:0;
@@ -91,7 +91,6 @@ footer{
     width:390px;
     margin-left:2px;
     margin-right:5px;
-    
 }
 
 textarea {

@@ -18,10 +18,7 @@
                 Welcome to OneRoom. 
                 A hopefully ridiculously simple and easy to build chatroom on Google App Engine.
                 <br />
-                <br />
-                {{ totalClients }} user(s) in this room.
                 </li>
-                
             </ul>
         </section>
         <footer id="message">
@@ -38,31 +35,17 @@
         <script src="/assets/js/jquery-ext.js"></script>
         <script src="/assets/js/chatroom.js"></script>
         <script type="text/javascript" src="/_ah/channel/jsapi"></script>
-        <script type="text/javascript">
-            var siteIdentifier = '12345678';
-
-      (function() {
-       var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
-       if(typeof(siteIdentifier)=='undefined'){
-           siteIdentifier = 0;
-       }
-       po.src = '/config?site_id='+siteIdentifier;
-       var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
-     })();
-    </script>
         <script  type="text/javascript">
-            
+            var channelToken = '{{ token }}'; //this is the channel token
+            var channelId = '{{ channel_id }}';
+            var clientSeq = '{{ clientSeq }}';
 //        var myNickName = '{{ nickName }}';
             var myNickName = 'Me';
-            var channelParams  = {
-                channelToken:'{{ token }}',
-                channelId:'{{ channel_id }}',
-                clientSeq: '{{ client_seq }}'
-            }
-            setChannelParams(channelParams);
-            console.log(getChannelParams());
+            
+            var siteIdentifier=123456;
+            
             $().ready(function() {
-                    reconnectChannel();
+                    connectChannel();
             });
         </script>
 

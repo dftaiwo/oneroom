@@ -13,21 +13,34 @@ var message_handlers = {
         'newMessage': handleNewMessage,
         'refreshCall': handleRefreshCall,
 }
+
 var connected = false,
         clientSequence = 0,
         clientSequences = [];
 var channel;
 var autoConnect = true;
+var globalChannelParams = {};
 
+
+function setChannelParams(channelParams) {
+        globalChannelParams = channelParams;
+
+}
+function getChannelParams() {
+        return globalChannelParams;
+
+}
 function connectChannel() {
+        channelParams = getChannelParams();
+//        logMessage('Channel Params', channelParams);
 
-        channel = new goog.appengine.Channel(channelToken);
+        channel = new goog.appengine.Channel(channelParams.channelToken);
         logMessage("Connecting to server...");
         channel.open({
                 onopen: function() {
                         connected = true;
                         logMessage("===============================================");
-                        logMessage("Connected to [" + channelId + "]");
+                        logMessage("Connected to [" +getChannelId() + "]");
                 },
                 onmessage: function(msg) {
                         var data = jQuery.parseJSON(msg.data),
@@ -48,11 +61,11 @@ function connectChannel() {
                 },
                 onclose: function() {
                         connected = false;
-                        logMessage("Disconnected from [" + channelId + "]");
+                        logMessage("Disconnected from [" + getChannelId() + "]");
                         logMessage("===============================================");
                         //Should I refresh?
                         if (autoConnect)
-                                connectChannel();
+                                reconnectChannel();
                 }
         });
 }
@@ -67,8 +80,7 @@ function updateClientsList(data) {
 function handleNewMessage(data) {
 
         updateClientsList(data);
-
-        if (data.clientSeq == clientSeq && data.channel_id == channelId) {//because I sent this message
+        if (data.client_seq == getClientSeq() && data.channel_id == getChannelId()) {//because I sent this message
                 logMessage('Message has gone around the world!');
                 return;
         }
@@ -96,8 +108,8 @@ function handleClientList(msg) {
 
 function logMessage(msg, msg2) {
         if (typeof (msg2) == 'undefined') {
-                console.log(msg);
-                return;
+                msg2='';
+                
         }
         console.log(msg, msg2);
 }
@@ -157,14 +169,15 @@ function playChatSound() {
 
 function sendToServer(messageToSend, msgTimeStamp) {
 //        outgoingMessages.append(messageToSend);
+
         var requestParams = {
-                channel_id: channelId,
-                client_seq: clientSeq,
+                channel_id: getChannelId(),
+                client_seq: getClientSeq(),
                 timestamp: msgTimeStamp,
                 msg: messageToSend
         }
 
-        console.log(requestParams);
+        //logMessage(requestParams);
         $.ajax({
                 url: "/message",
                 type: "POST",
@@ -172,13 +185,13 @@ function sendToServer(messageToSend, msgTimeStamp) {
                 dataType: 'json',
                 success: function(data, textStatus, jqXHR)
                 {
-                        console.log(data);
+                        //logMessage(data);
                         window.setTimeout(function() {
                                 $('#msg' + msgTimeStamp).removeClass('pending');
                         }, 500);
                 },
                 error: function(jqXHR, textStatus, errorThrown) {
-                        console.log(errorThrown, textStatus);
+                        logMessage(errorThrown, textStatus);
                 }
         });
 }
@@ -188,19 +201,45 @@ function getTimestamp() {
 }
 
 
+function reconnectChannel() {
+        //needs to get a fresh token, then connect
+        logMessage("Trying to reconnect to Server");
+        var requestParams = {'site_id': siteIdentifier}
+        $.ajax({
+                url: "/refreshToken",
+                type: "POST",
+                data: requestParams,
+                dataType: 'json',
+                success: function(data, textStatus, jqXHR)
+                {
+                        //logMessage(data);
+                        
+                        channelParams = {
+                                channelToken: data.result.token,
+                                channelId: data.result.channel_id,
+                                clientSeq: data.result.client_seq,
+                        }
+                        
+                        setChannelParams(channelParams);
+                        connectChannel();
+                        return;
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                        logMessage(errorThrown, textStatus);
+                        logMessage("Waiting before trying again");
+                        window.setTimeout(function() {
+                                reconnectChannel();
+                        }, 2500);
+                }
+        });
 
-function signinCallback(authResult) {
-        if (authResult['status']['signed_in']) {
-                console.log('This user is signed in');
-                // Update the app to reflect a signed in user
-                // Hide the sign-in button now that the user is authorized, for example:
-                document.getElementById('signinButton').setAttribute('style', 'display: none');
-        } else {
-                // Update the app to reflect a signed out user
-                // Possible error values:
-                //   "user_signed_out" - User is signed-out
-                //   "access_denied" - User denied access to your app
-                //   "immediate_failed" - Could not automatically log in the user
-                console.log('Sign-in state: ' + authResult['error']);
-        }
+}
+
+function getChannelId(){
+        channelParams = getChannelParams();
+        return channelParams.channelId;
+}
+function getClientSeq(){
+        channelParams = getChannelParams();
+        return channelParams.clientSeq;
 }
