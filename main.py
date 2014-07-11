@@ -96,9 +96,9 @@ class UserMessage(webapp2.RequestHandler):
 		clientKey = getClientKey(siteId);
 		scene_k = ndb.Key('Scene', clientKey);
 		scene = scene_k.get()
-# 		if scene is None:
-# 			logging.info('MainHandler creating Scene')
-# 			scene = Scene(name='Scene {0}'.format(siteId), id=clientKey)
+ 		if scene is None:
+ 			logging.info('MainHandler creating Scene')
+ 			scene = Scene(name='Scene {0}'.format(siteId), id=clientKey)
 
 		totalClients = len(scene.connections)
 		self.response.out.write(json.dumps(
@@ -122,7 +122,7 @@ class UserMessage(webapp2.RequestHandler):
 					'totalClients':totalClients,
 					'server_time' : int(time.time() * 1000),
 					'site_id':siteId,
-					'senderName':currentUser.nickname()
+					'senderName': 'Anonymous',#currentUser.nickname()
 				});
 		tStart = datetime.now()
 		channel.send_message(channel_id, message)
@@ -168,6 +168,7 @@ class UserConnected(webapp2.RequestHandler):
 		send_client_list(scene.connections)
 
 def requireAuth(self):
+	return;
 # 	argv=["main.py"]
 # 	service, flags = sample_tools.init(
 # 	argv, 'plus', 'v1', __doc__, __file__,
@@ -199,6 +200,48 @@ class LoginHandler(webapp2.RequestHandler):
 def getClientKey(siteId):
 	return "Scene_{0}".format(siteId);
 
+class ChatWidget(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
+	def get(self):
+		siteId =  self.request.get('site_id','default');
+		channel_id = "";
+		token = "";
+		clientKey = getClientKey(siteId);
+		scene_k = ndb.Key('Scene', clientKey);
+		scene = scene_k.get()
+		if scene is None:
+			logging.info('ChatWidget creating Scene')
+			scene = Scene(name='Scene {0}'.format(siteId), id=clientKey)
+
+		# take this opportunity to cull expired channels
+		removed = remove_expired_connections(scene.connections)
+		if removed:
+			send_client_list(scene.connections)
+
+		channel_id = str(scene.next_id)
+		scene.next_id += 1
+		scene.connections.append(Connection(channel_id=channel_id))
+		token = channel.create_channel(channel_id,duration_minutes=30)
+		scene.put()
+		logging.info('ChatWidget channel_id=%s' % channel_id)
+	
+		requestUrl = self.request.uri;
+		
+		chatServerUrlIndex = requestUrl.index('widget');
+		
+		chatServerUrl = requestUrl[0:chatServerUrlIndex];
+		
+		template_values = {
+								'channelToken' : token,
+								'channelId' : channel_id,
+								'client_seq':channel_id,
+								'totalClients': len(scene.connections),
+								'myNickName':"Me",
+								'siteId':siteId,
+								'chatServerUrl':chatServerUrl,
+						}
+		
+		path = os.path.join(os.path.dirname(__file__), "templates/widget.html")
+		self.response.out.write(template.render(path, template_values));
 
 class ChatJs(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
 	def get(self):
@@ -227,6 +270,11 @@ class ChatJs(webapp2.RequestHandler):#this should generate a js file just for th
 	
 		logOutUrl = users.create_logout_url('/');
 		
+		requestUrl = self.request.uri;
+		
+		chatServerUrlIndex = requestUrl.index('config');
+		
+		chatServerUrl = requestUrl[0:chatServerUrlIndex];
 		
 		template_values = {
 								'channelToken' : token,
@@ -235,7 +283,8 @@ class ChatJs(webapp2.RequestHandler):#this should generate a js file just for th
 								'totalClients': len(scene.connections),
 								'myNickName':"Me",
 								'siteId':siteId,
-								'logoutUrl':logOutUrl
+								'logoutUrl':logOutUrl,
+								'chatServerUrl':chatServerUrl,
 						}
 		
 		path = os.path.join(os.path.dirname(__file__), "templates/config.js")
@@ -269,8 +318,9 @@ class RefreshToken(webapp2.RequestHandler):#this should generate a js file just 
 	
 		tokenResponse = {'result':{
 								'token' : token,
+								'site_id':siteId,
 								'channel_id' : channel_id,
-								'client_seq':currentUser.user_id(),
+								'client_seq':channel_id, #currentUser.user_id(),
 								'totalClients': len(scene.connections),
 								}
 						}
@@ -324,6 +374,7 @@ app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/login',LoginHandler),
     ('/config',ChatJs),
+    ('/widget',ChatWidget),
     ('/refreshToken',RefreshToken),
     ('/message', UserMessage),
     ('/_ah/channel/connected/', UserConnected),

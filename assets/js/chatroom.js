@@ -27,7 +27,9 @@ var globalChannelParams = {};
 function setChannelParams(channelParams) {
         logMessage("Setting channel Params", channelParams);
         globalChannelParams = channelParams;
-        myNickname = channelParams.myNickname;
+        if(channelParams.myNickname){
+                myNickname = channelParams.myNickname;
+        }
 }
 function getChannelParams() {
         return globalChannelParams;
@@ -125,8 +127,7 @@ function logMessage(msg, msg2) {
 
 $('#textMessage').pressEnter(function() {
         if(!isConnected){
-                
-                showMessage("Disconnected. Click Ok to reconnect");
+                //showMessage("Disconnected. Click Ok to reconnect");
                 reconnectChannel();
                 return;
         }
@@ -226,13 +227,14 @@ function reconnectChannel() {
                 dataType: 'json',
                 success: function(data, textStatus, jqXHR)
                 {
-                        //logMessage(data);
+                        logMessage(data);
                         channelParams = {
                                 channelToken: data.result.token,
                                 channelId: data.result.channel_id,
                                 clientSeq: data.result.client_seq,
+                                siteId:data.result.site_id
                         }
-                        
+                        siteIdentifier = data.result.site_id;
                         setChannelParams(channelParams);
                         connectChannel();
                         return;

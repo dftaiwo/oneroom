@@ -7,7 +7,7 @@
              line-height:1.2; 
              vertical-align:middle;               
              font-weight:200;
-             font-size:16px;
+             font-size:14px;
              letter-spacing: 0.02em;
 }
 html,body{
@@ -88,7 +88,7 @@ footer {
     margin-bottom: 0;
     z-index:2;
     display:block;
-    width:390px;
+    width:100%;
     margin-left:2px;
     margin-right:5px;
 }
@@ -123,7 +123,7 @@ header span a{
     color:#fff;
     text-decoration: none;
 }
-.pending{
+.pending {
     font-style:  italic;
     color:#666;
 }
