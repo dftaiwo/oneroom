@@ -270,3 +270,4 @@ function setConnectionStatus(status){
 function showMessage(msg){
         alert(msg);
 }
+
