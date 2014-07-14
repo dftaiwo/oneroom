@@ -1,14 +1,5 @@
-/** This is an auto-generated file  **/
+/** This is an auto-generated file that should not be cached **/
 var chatServerUrl = '{{ chatServerUrl }}'
-/*
-var channelParams  = {
-                channelToken:'{{ channelToken }}',
-                channelId:'{{ channelId }}',
-                clientSeq: '{{ client_seq }}',
-                myNickname: '{{ myNickName }}',
-                siteId:'{{ siteId }}'
-}
-*/
 
 var orChatIframe = document.createElement('iframe');
 orChatIframe.setAttribute('style'," width:300px; height:400px; overflow:hidden; position:fixed; bottom:0; right:20%; z-index:9;border:1px solid #999;");

@@ -246,47 +246,14 @@ class ChatWidget(webapp2.RequestHandler):#this should generate a js file just fo
 class ChatJs(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
 	def get(self):
 		siteId =  self.request.get('site_id','default');
-		
-		channel_id = "";
-		token = "";
-		clientKey = getClientKey(siteId);
-		scene_k = ndb.Key('Scene', clientKey);
-		scene = scene_k.get()
-		if scene is None:
-			logging.info('MainHandler creating Scene')
-			scene = Scene(name='Scene {0}'.format(siteId), id=clientKey)
-
-		# take this opportunity to cull expired channels
-		removed = remove_expired_connections(scene.connections)
-		if removed:
-			send_client_list(scene.connections)
-
-		channel_id = str(scene.next_id)
-		scene.next_id += 1
-		scene.connections.append(Connection(channel_id=channel_id))
-		token = channel.create_channel(channel_id,duration_minutes=30)
-		scene.put()
-		logging.info('MainHandler channel_id=%s' % channel_id)
-	
-		logOutUrl = users.create_logout_url('/');
-		
 		requestUrl = self.request.uri;
 		
 		chatServerUrlIndex = requestUrl.index('config');
-		
 		chatServerUrl = requestUrl[0:chatServerUrlIndex];
-		
 		template_values = {
-								'channelToken' : token,
-								'channelId' : channel_id,
-								'client_seq':channel_id,
-								'totalClients': len(scene.connections),
-								'myNickName':"Me",
 								'siteId':siteId,
-								'logoutUrl':logOutUrl,
 								'chatServerUrl':chatServerUrl,
 						}
-		
 		path = os.path.join(os.path.dirname(__file__), "templates/config.js")
 		self.response.headers['Content-Type'] = 'application/javascript'
 		self.response.out.write(template.render(path, template_values));
