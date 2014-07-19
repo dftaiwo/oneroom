@@ -332,11 +332,9 @@ class MainHandler(webapp2.RequestHandler):
 # 								'nickName':currentUser.nickname(),
 # 								'logoutUrl':logOutUrl
 # 						}
-		path = os.path.join(os.path.dirname(__file__), "templates/chatroom.html")
+		path = os.path.join(os.path.dirname(__file__), "templates/welcome.html")
 		self.response.out.write(template.render(path, {}));
 		
-	
-
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/login',LoginHandler),
