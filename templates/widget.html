@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>OneRoom Chat</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="/assets/css/chatroom.css" />
+    </head>
+    <body>
+        <header>
+            <a onclick="minimizeChat(); ">
+                OneRoom
+            </a>
+        </header>
+        <section id="chatBox">
+            <ul id="chatBoxList">
+                
+            </ul>
+        </section>
+        <footer id="message">
+            <textarea id="textMessage" class="expanding" name="message" placeholder="Type message here. Press Enter to send" rows="1"></textarea>
+        </footer>
+        <!--:demos.9lessons.info/notify -->
+        <audio id="audioStreams">
+            <source src="/assets/audio/msg.ogg" type="audio/ogg">
+            <source src="/assets/audio/msg.mp3" type="audio/mpeg">
+            <source src="/assets/audio/msg.wav" type="audio/wav">
+        </audio>
+        
+        <!--<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>-->
+        <script src="/assets/js/jquery-1.10.2.min.js"></script>
+        <script src="/assets/js/jquery-ext.js"></script>
+        <script src="/assets/js/chatroom.js"></script>
+        <script type="text/javascript" src="/_ah/channel/jsapi"></script>
+        <script>
+            var siteIdentifier = '{{ siteId }}';
+            reconnectChannel();
+        </script>
+        
+    </body>
+</html>

@@ -2,7 +2,7 @@
 <html>
     
     <head>
-        <title>OneRoom Chat : .</title>
+        <title>OneRoom Chat</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="/assets/css/chatroom.css" />
@@ -19,10 +19,7 @@
                 Welcome to OneRoom. 
                 A hopefully ridiculously simple and easy to build chatroom on Google App Engine.
                 <br />
-                <br />
-                There were {{ totalClients }} user(s) in this room when you entered.
                 </li>
-                
             </ul>
         </section>
         <footer id="message">
@@ -33,8 +30,9 @@
             <source src="/assets/audio/msg.ogg" type="audio/ogg">
             <source src="/assets/audio/msg.mp3" type="audio/mpeg">
             <source src="/assets/audio/msg.wav" type="audio/wav">
-        </audio>'
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+        </audio>
+        <!--<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>-->
+        <script src="/assets/js/jquery-1.10.2.min.js"></script>
         <script src="/assets/js/jquery-ext.js"></script>
         <script src="/assets/js/chatroom.js"></script>
         <script type="text/javascript" src="/_ah/channel/jsapi"></script>
@@ -42,10 +40,14 @@
             var channelToken = '{{ token }}'; //this is the channel token
             var channelId = '{{ channel_id }}';
             var clientSeq = '{{ clientSeq }}';
-//            var myNickName = '{{ nickName }}';
+//        var myNickName = '{{ nickName }}';
             var myNickName = 'Me';
-            console.log(channelToken,channelId);
             
+            var siteIdentifier=123456;
+            
+            $().ready(function() {
+                    connectChannel();
+            });
         </script>
 
     </body>

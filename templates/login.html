@@ -10,24 +10,43 @@
         <header>One Room
         </header>
         <section id="chatBox">
-        <div>
-            <ul id="chatBoxList">
-                <li>
-                    <p>
-                Welcome to OneRoom. 
-                A hopefully ridiculously simple and easy to build chatroom on Google App Engine.
-                </p>
-                <p>
-                Please log-in to continue
-                                </p>
-                <p>
+            <div>
+                <ul id="chatBoxList">
+                    <li>
+                        <p>
+                            Welcome to OneRoom. 
+                            A hopefully ridiculously simple and easy to build chatroom on Google App Engine.
+                        </p>
+                        <p>
+                            Please log-in to continue
+                        </p>
+                        <p>
+<!--                            <span id="signinButton">
+  <span
+    class="g-signin"
+    data-callback="signinCallback"
+    data-clientid="688866146784-c6nm0sj9gqqrrn32srg7q0a9dqvhqdg8.apps.googleusercontent.com"
+    data-cookiepolicy="single_host_origin"
+    data-requestvisibleactions="http://schema.org/AddAction"
+    data-scope="https://www.googleapis.com/auth/plus.login">
+  </span>
+</span>-->
+<a href="{{ googleLoginUrl }}">Login</a>
+                        </p>
+                    </li>
 
-                          <a href="{{ googleLoginUrl }}">G+ Login</a>
-                          </p>
-                </li>
-                
-            </ul>
-        </div>
+                </ul>
+            </div>
         </section>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+        <script src="/assets/js/jquery-ext.js"></script>
+        <script src="/assets/js/chatroom.js"></script>
+        <script type="text/javascript">
+      (function() {
+       var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+       po.src = 'https://apis.google.com/js/client:plusone.js';
+       var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+     })();
+    </script>
     </body>
 </html>

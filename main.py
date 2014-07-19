@@ -69,17 +69,20 @@ def id_generator(size=6, chars=string.ascii_letters + string.digits):
 
 class Connection(ndb.Model):
 	channel_id = ndb.StringProperty()
+	site_id = ndb.StringProperty(indexed=True)
 	timestamp = ndb.DateTimeProperty(auto_now_add=True)
 
 class Scene(ndb.Model):
 	name = ndb.StringProperty()
 	next_id = ndb.IntegerProperty(default=0, indexed=False)
+	site_id = ndb.StringProperty(indexed=True)
 	connections = ndb.StructuredProperty(Connection, repeated=True)
 	
 class UserMessage(webapp2.RequestHandler):
 	def post(self):
 		currentUser = requireAuth(self);
 		channel_id = self.request.get('channel_id');
+		siteId  = self.request.get('site_id');
 		clientSeq = self.request.get('client_seq');
 		msgTimeStamp = self.request.get('timestamp');
 		msg = self.request.get('msg');
@@ -92,8 +95,13 @@ class UserMessage(webapp2.RequestHandler):
 		
 		if sequence is None:
 			sequence = 0
-		scene_k = ndb.Key('Scene', 'scene1')
+		clientKey = getClientKey(siteId);
+		scene_k = ndb.Key('Scene', clientKey);
 		scene = scene_k.get()
+ 		if scene is None:
+ 			logging.info('MainHandler creating Scene')
+ 			scene = Scene(name='Scene_{0}'.format(siteId), id=clientKey)
+
 		totalClients = len(scene.connections)
 		self.response.out.write(json.dumps(
 						{
@@ -110,12 +118,13 @@ class UserMessage(webapp2.RequestHandler):
 					'type' : 'newMessage',
 					'sequence' : sequence,
 					'timestamp' : msgTimeStamp,
-					'clientSeq' : clientSeq,
+					'client_seq' : clientSeq,
 					'channel_id' : channel_id,
 					'msg' : msg,
 					'totalClients':totalClients,
 					'server_time' : int(time.time() * 1000),
-					'senderName':currentUser.nickname()
+					'site_id':siteId,
+					'senderName': 'Anonymous',#currentUser.nickname()
 				});
 		tStart = datetime.now()
 		channel.send_message(channel_id, message)
@@ -130,7 +139,6 @@ class UserMessage(webapp2.RequestHandler):
 					channel.send_message(c.channel_id, message)
 					tTotal = datetime.now() - tStart
 					logging.info('	 broadcast to [%s] (%dms)' % (c.channel_id, tTotal.microseconds / 1000))
-
 
 
 class UserDisconnected(webapp2.RequestHandler):
@@ -161,14 +169,21 @@ class UserConnected(webapp2.RequestHandler):
 		send_client_list(scene.connections)
 
 def requireAuth(self):
-	
-	currentUser = users.get_current_user()
-	if currentUser:
- 		userId = currentUser.user_id();
- 		memcache.add(key=userId, value=currentUser.nickname(), time=21600);
-		return currentUser;
-	else:
-		self.redirect('/login',False,True)
+	return;
+# 	argv=["main.py"]
+# 	service, flags = sample_tools.init(
+# 	argv, 'plus', 'v1', __doc__, __file__,
+# 	scope='https://www.googleapis.com/auth/plus.me')
+# 	people_resource = service.people()
+# 	people_document = people_resource.get(userId='me').execute()
+# 	self.response.out.write("Hello");
+ 	currentUser = users.get_current_user()
+ 	if currentUser:
+  		userId = currentUser.user_id();
+  		memcache.add(key=userId, value=currentUser.nickname(), time=21600);
+ 		return currentUser;
+ 	else:
+ 		self.redirect('/login',False,True)
 
 class LoginHandler(webapp2.RequestHandler):
 	def get(self):
@@ -181,19 +196,22 @@ class LoginHandler(webapp2.RequestHandler):
 			}
 		path = os.path.join(os.path.dirname(__file__), "templates/login.html")
 		self.response.out.write(template.render(path, template_values));
-		
-		
-class MainHandler(webapp2.RequestHandler):
-	
+
+
+def getClientKey(siteId):
+	return "Scene_{0}".format(siteId);
+
+class ChatWidget(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
 	def get(self):
-		currentUser = requireAuth(self);
+		siteId =  self.request.get('site_id','default');
 		channel_id = "";
 		token = "";
-		scene_k = ndb.Key('Scene', 'scene1')
+		clientKey = getClientKey(siteId);
+		scene_k = ndb.Key('Scene', clientKey);
 		scene = scene_k.get()
 		if scene is None:
-			logging.info('MainHandler creating Scene')
-			scene = Scene(name='Scene 1', id='scene1')
+			logging.info('ChatWidget creating Scene')
+			scene = Scene(name='Scene_{0}'.format(siteId), id=clientKey)
 
 		# take this opportunity to cull expired channels
 		removed = remove_expired_connections(scene.connections)
@@ -202,30 +220,128 @@ class MainHandler(webapp2.RequestHandler):
 
 		channel_id = str(scene.next_id)
 		scene.next_id += 1
-		scene.connections.append(Connection(channel_id=channel_id))
-		token = channel.create_channel(channel_id,duration_minutes=300)
+		scene.connections.append(Connection(channel_id=channel_id,site_id=siteId))
+		token = channel.create_channel(channel_id,duration_minutes=30)
+		scene.put()
+		logging.info('ChatWidget channel_id=%s' % channel_id)
+	
+		requestUrl = self.request.uri;
+		
+		chatServerUrlIndex = requestUrl.index('widget');
+		
+		chatServerUrl = requestUrl[0:chatServerUrlIndex];
+		
+		template_values = {
+								'channelToken' : token,
+								'channelId' : channel_id,
+								'client_seq':channel_id,
+								'totalClients': len(scene.connections),
+								'myNickName':"Me",
+								'siteId':siteId,
+								'chatServerUrl':chatServerUrl,
+						}
+		
+		path = os.path.join(os.path.dirname(__file__), "templates/widget.html")
+		self.response.out.write(template.render(path, template_values));
+
+class ChatJs(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
+	def get(self):
+		siteId =  self.request.get('site_id','default');
+		requestUrl = self.request.uri;
+		
+		chatServerUrlIndex = requestUrl.index('config');
+		chatServerUrl = requestUrl[0:chatServerUrlIndex];
+		template_values = {
+								'siteId':siteId,
+								'chatServerUrl':chatServerUrl,
+						}
+		path = os.path.join(os.path.dirname(__file__), "templates/config.js")
+		self.response.headers['Content-Type'] = 'application/javascript'
+		self.response.out.write(template.render(path, template_values));
+
+class RefreshToken(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
+	def post(self):
+		siteId =  self.request.get('site_id','default');
+		currentUser = requireAuth(self);
+		channel_id = "";
+		token = "";
+		clientKey = getClientKey(siteId);
+		scene_k = ndb.Key('Scene', clientKey);
+		scene = scene_k.get()
+		if scene is None:
+			logging.info('MainHandler creating Scene')
+			scene = Scene(name='Scene_{0}'.format(siteId), id=clientKey)
+
+		# take this opportunity to cull expired channels
+		removed = remove_expired_connections(scene.connections)
+		if removed:
+			send_client_list(scene.connections)
+
+		channel_id = str(scene.next_id)
+		scene.next_id += 1
+		scene.connections.append(Connection(channel_id=channel_id,site_id=siteId))
+		token = channel.create_channel(channel_id,duration_minutes=30)
 		scene.put()
 		logging.info('MainHandler channel_id=%s' % channel_id)
 	
-		logOutUrl = users.create_logout_url('/');
-		
-		
-		template_values = {
+		tokenResponse = {'result':{
 								'token' : token,
+								'site_id':siteId,
 								'channel_id' : channel_id,
-								'clientSeq':currentUser.user_id(),
+								'client_seq':channel_id, #currentUser.user_id(),
 								'totalClients': len(scene.connections),
-								'nickName':currentUser.nickname(),
-								'logoutUrl':logOutUrl
+								}
 						}
-		path = os.path.join(os.path.dirname(__file__), "templates/chatroom.html")
-		self.response.out.write(template.render(path, template_values));
 		
+		self.response.headers['Content-Type'] = 'application/javascript'
+		self.response.out.write(json.dumps(tokenResponse));	
+				
+		
+class MainHandler(webapp2.RequestHandler):
 	
-
+	def get(self):
+ 		currentUser = requireAuth(self);
+		
+# 		channel_id = "";
+# 		token = "";
+# 		scene_k = ndb.Key('Scene', 'scene1')
+# 		scene = scene_k.get()
+# 		if scene is None:
+# 			logging.info('MainHandler creating Scene')
+# 			scene = Scene(name='Scene 1', id='scene1')
+# 
+# 		# take this opportunity to cull expired channels
+# 		removed = remove_expired_connections(scene.connections)
+# 		if removed:
+# 			send_client_list(scene.connections)
+# 
+# 		channel_id = str(scene.next_id)
+# 		scene.next_id += 1
+# 		scene.connections.append(Connection(channel_id=channel_id))
+# 		token = channel.create_channel(channel_id,duration_minutes=30)
+# 		scene.put()
+# 		logging.info('MainHandler channel_id=%s' % channel_id)
+# 	
+# 		logOutUrl = users.create_logout_url('/');
+# 		
+# 		
+# 		template_values = {
+# 								'token' : token,
+# 								'channel_id' : channel_id,
+# 								'client_seq':currentUser.user_id(),
+# 								'totalClients': len(scene.connections),
+# 								'nickName':currentUser.nickname(),
+# 								'logoutUrl':logOutUrl
+# 						}
+		path = os.path.join(os.path.dirname(__file__), "templates/welcome.html")
+		self.response.out.write(template.render(path, {}));
+		
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/login',LoginHandler),
+    ('/config',ChatJs),
+    ('/widget',ChatWidget),
+    ('/refreshToken',RefreshToken),
     ('/message', UserMessage),
     ('/_ah/channel/connected/', UserConnected),
     ('/_ah/channel/disconnected/', UserDisconnected)
