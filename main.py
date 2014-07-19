@@ -69,11 +69,13 @@ def id_generator(size=6, chars=string.ascii_letters + string.digits):
 
 class Connection(ndb.Model):
 	channel_id = ndb.StringProperty()
+	site_id = ndb.StringProperty(indexed=True)
 	timestamp = ndb.DateTimeProperty(auto_now_add=True)
 
 class Scene(ndb.Model):
 	name = ndb.StringProperty()
 	next_id = ndb.IntegerProperty(default=0, indexed=False)
+	site_id = ndb.StringProperty(indexed=True)
 	connections = ndb.StructuredProperty(Connection, repeated=True)
 	
 class UserMessage(webapp2.RequestHandler):
@@ -98,7 +100,7 @@ class UserMessage(webapp2.RequestHandler):
 		scene = scene_k.get()
  		if scene is None:
  			logging.info('MainHandler creating Scene')
- 			scene = Scene(name='Scene {0}'.format(siteId), id=clientKey)
+ 			scene = Scene(name='Scene_{0}'.format(siteId), id=clientKey)
 
 		totalClients = len(scene.connections)
 		self.response.out.write(json.dumps(
@@ -137,7 +139,6 @@ class UserMessage(webapp2.RequestHandler):
 					channel.send_message(c.channel_id, message)
 					tTotal = datetime.now() - tStart
 					logging.info('	 broadcast to [%s] (%dms)' % (c.channel_id, tTotal.microseconds / 1000))
-
 
 
 class UserDisconnected(webapp2.RequestHandler):
@@ -210,7 +211,7 @@ class ChatWidget(webapp2.RequestHandler):#this should generate a js file just fo
 		scene = scene_k.get()
 		if scene is None:
 			logging.info('ChatWidget creating Scene')
-			scene = Scene(name='Scene {0}'.format(siteId), id=clientKey)
+			scene = Scene(name='Scene_{0}'.format(siteId), id=clientKey)
 
 		# take this opportunity to cull expired channels
 		removed = remove_expired_connections(scene.connections)
@@ -219,7 +220,7 @@ class ChatWidget(webapp2.RequestHandler):#this should generate a js file just fo
 
 		channel_id = str(scene.next_id)
 		scene.next_id += 1
-		scene.connections.append(Connection(channel_id=channel_id))
+		scene.connections.append(Connection(channel_id=channel_id,site_id=siteId))
 		token = channel.create_channel(channel_id,duration_minutes=30)
 		scene.put()
 		logging.info('ChatWidget channel_id=%s' % channel_id)
@@ -269,7 +270,7 @@ class RefreshToken(webapp2.RequestHandler):#this should generate a js file just 
 		scene = scene_k.get()
 		if scene is None:
 			logging.info('MainHandler creating Scene')
-			scene = Scene(name='Scene {0}'.format(siteId), id=clientKey)
+			scene = Scene(name='Scene_{0}'.format(siteId), id=clientKey)
 
 		# take this opportunity to cull expired channels
 		removed = remove_expired_connections(scene.connections)
@@ -278,7 +279,7 @@ class RefreshToken(webapp2.RequestHandler):#this should generate a js file just 
 
 		channel_id = str(scene.next_id)
 		scene.next_id += 1
-		scene.connections.append(Connection(channel_id=channel_id))
+		scene.connections.append(Connection(channel_id=channel_id,site_id=siteId))
 		token = channel.create_channel(channel_id,duration_minutes=30)
 		scene.put()
 		logging.info('MainHandler channel_id=%s' % channel_id)
