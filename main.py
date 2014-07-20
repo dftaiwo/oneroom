@@ -325,49 +325,22 @@ class RefreshToken(webapp2.RequestHandler):#this should generate a js file just 
 				
 		
 class MainHandler(webapp2.RequestHandler):
-	
 	def get(self):
- 		
-		
-# 		channel_id = "";
-# 		token = "";
-# 		scene_k = ndb.Key('Scene', 'scene1')
-# 		scene = scene_k.get()
-# 		if scene is None:
-# 			logging.info('MainHandler creating Scene')
-# 			scene = Scene(name='Scene 1', id='scene1')
-# 
-# 		# take this opportunity to cull expired channels
-# 		removed = remove_expired_connections(scene.connections)
-# 		if removed:
-# 			send_client_list(scene.connections)
-# 
-# 		channel_id = str(scene.next_id)
-# 		scene.next_id += 1
-# 		scene.connections.append(Connection(channel_id=channel_id))
-# 		token = channel.create_channel(channel_id,duration_minutes=30)
-# 		scene.put()
-# 		logging.info('MainHandler channel_id=%s' % channel_id)
-# 	
-# 		logOutUrl = users.create_logout_url('/');
-# 		
-# 		
-# 		template_values = {
-# 								'token' : token,
-# 								'channel_id' : channel_id,
-# 								'client_seq':currentUser.user_id(),
-# 								'totalClients': len(scene.connections),
-# 								'nickName':currentUser.nickname(),
-# 								'logoutUrl':logOutUrl
-# 						}
 		path = os.path.join(os.path.dirname(__file__), "templates/welcome.html")
 		self.response.out.write(template.render(path, {}));
-		
+
+class DemoPage(webapp2.RequestHandler):
+	def get(self):
+		path = os.path.join(os.path.dirname(__file__), "templates/demo.html")
+		self.response.out.write(template.render(path, {}));
+
+			
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/login',LoginHandler),
     ('/config',ChatJs),
     ('/widget',ChatWidget),
+    ('/demo',DemoPage),
     ('/refreshToken',RefreshToken),
     ('/message', UserMessage),
     ('/_ah/channel/connected/', UserConnected),
