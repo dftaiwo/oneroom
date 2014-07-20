@@ -35,46 +35,8 @@ import random
 import string
 import time
 from libs import xss
-from webapp2_extras import sessions
+import re
 
-
-
-				
-def send_client_list(connections):
-	clients = []
-	for c in connections:
-		clients.append(c.channel_id)
-	message = json.dumps({
-		'type' : 'clientsList',
-		'clients' : clients,
-		'totalClients': len(clients),
-	})
-	for c in connections:
-		channel.send_message(c.channel_id, message)
-		logging.info('	 sending client_list to [%s]' % (c.channel_id))
-
-
-
-def remove_expired_connections(connections):
-	removed = False
-	for c in connections:
-		time_diff = datetime.now() - c.timestamp
-		max_time = timedelta(hours=2)
-		if time_diff >= max_time:
-			logging.info('Removing expired connection [%s] timedelta=%s' % (c.channel_id, str(c.timestamp)))
-			connections.remove(c)
-			removed = True
-	return removed
-					
-def id_generator(size=6, chars=string.ascii_letters + string.digits):
-	return ''.join(random.choice(chars) for _ in range(size))   
-
-
-class ChatUser(ndb.Model):
-    user_id = ndb.StringProperty()
-    user_image = ndb.StringProperty()
-    display_name = ndb.StringProperty()
-    joined = ndb.DateTimeProperty(auto_now_add=True)
 
 
 class Connection(ndb.Model):
@@ -186,19 +148,6 @@ class UserConnected(webapp2.RequestHandler):
 # 		scene = scene_k.get()
 # 		send_client_list(scene.connections)
 
-class LoginHandler(webapp2.RequestHandler):
-	def get(self):
-		
-		googleLoginUrl = users.create_login_url('/');
-		
-		template_values = {
-					'googleLoginUrl' : googleLoginUrl,
-							
-			}
-		path = os.path.join(os.path.dirname(__file__), "templates/login.html")
-		self.response.out.write(template.render(path, template_values));
-
-
 def getClientKey(siteId):
 	return "Scene_{0}".format(siteId);
 
@@ -261,16 +210,6 @@ class ChatJs(webapp2.RequestHandler):#this should generate a js file just for th
 		self.response.out.write(template.render(path, template_values));
 
 
-def storeUserInfo(userId ,userInfo):
-	
-	memcache.add(key=userId, value=userInfo, time=21600);
-	pass
-
-def getUserInfo(userId):
-	userInfo = memcache.get(userId);
-	logging.info('Logging userinfo')
-	logging.info(userInfo);
-	return userInfo;
 	
 
 
@@ -326,21 +265,125 @@ class RefreshToken(webapp2.RequestHandler):#this should generate a js file just 
 		
 class MainHandler(webapp2.RequestHandler):
 	def get(self):
+		loadHeader(self,'Welcome');
+		template_values = {
+					
+		}
 		path = os.path.join(os.path.dirname(__file__), "templates/welcome.html")
-		self.response.out.write(template.render(path, {}));
+		self.response.out.write(template.render(path, template_values));
+		loadFooter(self);
 
 class DemoPage(webapp2.RequestHandler):
 	def get(self):
+		loadHeader(self,'Demo Page');
 		path = os.path.join(os.path.dirname(__file__), "templates/demo.html")
 		self.response.out.write(template.render(path, {}));
+		loadFooter(self);
+
+
+def loadHeader(self,pageTitle):
+	#self.response.out.write(logOutUrl);
+	template_values = {
+		'page_title' :pageTitle
+	}
+	
+	path = os.path.join(os.path.dirname(__file__), "templates/header.html")
+	self.response.out.write(template.render(path, template_values));
+
+
+def loadFooter(self):
+	template_values = {}
+	path = os.path.join(os.path.dirname(__file__), "templates/footer.html")
+	self.response.out.write(template.render(path, template_values));	
+
+
+class CreateWidget(webapp2.RequestHandler):
+	def get(self):
+		template_values = {}
+		
+		widgetUrl = self.request.get('url',False);
+		widgetTitle  = self.request.get('title',False);
+		if widgetUrl and widgetTitle:
+			urlIsValid = is_valid_url(widgetUrl);
+			logging.info('	 urlIsValid [%s]' % (urlIsValid))
+			if urlIsValid is True:
+				pass
+			else:
+				template_values['form_error']="'{0}' is not a valid url. Please check and try again.".format(widgetUrl);
+		
+		loadHeader(self,'Create Widget');
+		currentUser = requireAdminAuth(self);
+		path = os.path.join(os.path.dirname(__file__), "templates/create_widget.html")
+		self.response.out.write(template.render(path,template_values));
+		loadFooter(self);
+	
+
+def is_valid_url(url):
+	#http://stackoverflow.com/questions/827557/how-do-you-validate-a-url-with-a-regular-expression-in-python
+	regex = re.compile(
+	r'^https?://'  # http:// or https://
+	r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+	r'localhost|'  # localhost...
+	r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
+	r'(?::\d+)?'  # optional port
+	r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+	return url is not None and regex.search(url)
+   	
+def storeUserInfo(userId ,userInfo):
+	memcache.add(key=userId, value=userInfo, time=21600);
+	
+
+
+def requireAdminAuth(self):
+	currentUser = users.get_current_user()
+ 	if currentUser:
+  		return currentUser;
+ 	else:
+ 		googleLoginUrl = users.create_login_url(self.request.uri);
+ 		self.redirect(googleLoginUrl,False,True)
+	
+
+def getUserInfo(userId):
+	userInfo = memcache.get(userId);
+	return userInfo;
+
+
+def send_client_list(connections):
+	clients = []
+	for c in connections:
+		clients.append(c.channel_id)
+	message = json.dumps({
+		'type' : 'clientsList',
+		'clients' : clients,
+		'totalClients': len(clients),
+	})
+	for c in connections:
+		channel.send_message(c.channel_id, message)
+		logging.info('	 sending client_list to [%s]' % (c.channel_id))
+
+
+
+def remove_expired_connections(connections):
+	removed = False
+	for c in connections:
+		time_diff = datetime.now() - c.timestamp
+		max_time = timedelta(hours=2)
+		if time_diff >= max_time:
+			logging.info('Removing expired connection [%s] timedelta=%s' % (c.channel_id, str(c.timestamp)))
+			connections.remove(c)
+			removed = True
+	return removed
+					
+def id_generator(size=6, chars=string.ascii_letters + string.digits):
+	return ''.join(random.choice(chars) for _ in range(size))   
 
 			
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
-    ('/login',LoginHandler),
     ('/config',ChatJs),
     ('/widget',ChatWidget),
     ('/demo',DemoPage),
+    ('/createWidget',CreateWidget),
     ('/refreshToken',RefreshToken),
     ('/message', UserMessage),
     ('/_ah/channel/connected/', UserConnected),
