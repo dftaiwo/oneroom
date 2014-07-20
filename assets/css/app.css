@@ -50,3 +50,9 @@ label{
 .error{
     color:red;
 }
+
+textarea{
+    display:block;
+    width:90%;
+    height:150px;
+}

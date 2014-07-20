@@ -1,4 +1,14 @@
         <h1>
             Demo Page
         </h1>
-        <script type="text/javascript" src="/config?site_id=500"></script>
+        <script type="text/javascript">
+                (function() {
+                    var po = document.createElement('script');
+                    po.type = 'text/javascript';
+                    po.async = true;
+                    po.src = '{{ chatServerUrl }}oneroom.js';
+                    var s = document.getElementsByTagName('script')[0];
+                    s.parentNode.insertBefore(po, s);
+                })();
+                
+        </script>

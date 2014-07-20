@@ -1,11 +1,30 @@
 
         <h1>One-Room Chat Service</h1>
 
-            One Thing: Create a Chat Room for your site using Google App Engine.<br />
+            One Thing: Create a Chat Room for your site using Google App Engine.<br /><br />
                             It's a hopefully ridiculously simple and easy to build chatroom on Google App Engine.
         <br />
         <br />
         <a href="/demo" target="_blank">Take this for a spin</a>
         <br />
         <br />
-        <a href="/createWidget" target="_blank">Create a Chat Widget</a>
+        To add a widget to your website, simply <strong>copy and paste the code</strong> from the box below into your page!
+        <br />
+        It auto-magically figures out where it is  running from and restricts chats to only people on your website!
+        <br />
+        <strong>That's all!</strong><br />
+        &nbsp;
+        <textarea readonly="readonly"><script type="text/javascript">
+                (function() {
+                    var po = document.createElement('script');
+                    po.type = 'text/javascript';
+                    po.async = true;
+                    po.src = '{{ chatServerUrl }}oneroom.js';
+                    var s = document.getElementsByTagName('script')[0];
+                    s.parentNode.insertBefore(po, s);
+                })();
+                
+        </script></textarea>
+        <p>&nbsp;</p>
+
+        

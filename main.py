@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# import hashlib
+# print hashlib.md5("whatever your string is").hexdigest()
 #
 import webapp2
 from google.appengine.api import channel
@@ -36,7 +38,7 @@ import string
 import time
 from libs import xss
 import re
-
+import hashlib
 
 
 class Connection(ndb.Model):
@@ -194,6 +196,22 @@ class ChatWidget(webapp2.RequestHandler):#this should generate a js file just fo
 		path = os.path.join(os.path.dirname(__file__), "templates/widget.html")
 		self.response.out.write(template.render(path, template_values));
 
+
+class OneRoom(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
+	def get(self):
+		requestUrl = self.request.uri;
+		chatServerUrlIndex = requestUrl.index('oneroom.js');
+		chatServerUrl = requestUrl[0:chatServerUrlIndex];
+		template_values = {
+								
+								'chatServerUrl':chatServerUrl,
+						}
+		path = os.path.join(os.path.dirname(__file__), "templates/oneroom.js")
+		self.response.headers['Content-Type'] = 'application/javascript'
+		self.response.out.write(template.render(path, template_values));
+
+		
+
 class ChatJs(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
 	def get(self):
 		siteId =  self.request.get('site_id','default');
@@ -210,12 +228,9 @@ class ChatJs(webapp2.RequestHandler):#this should generate a js file just for th
 		self.response.out.write(template.render(path, template_values));
 
 
-	
-
-
 class RefreshToken(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
 	def post(self):
-		siteId =  self.request.get('site_id','default');
+		siteId = hashSiteId(self);
 		#currentUser = requireAuth(self);
 		displayName=self.request.get('name','anonymous');
 		userId=self.request.get('user_id',0);
@@ -266,9 +281,14 @@ class RefreshToken(webapp2.RequestHandler):#this should generate a js file just 
 class MainHandler(webapp2.RequestHandler):
 	def get(self):
 		loadHeader(self,'Welcome');
+
+		requestUrl = self.request.uri;
+		
 		template_values = {
-					
-		}
+								
+								'chatServerUrl':requestUrl,
+						}
+		
 		path = os.path.join(os.path.dirname(__file__), "templates/welcome.html")
 		self.response.out.write(template.render(path, template_values));
 		loadFooter(self);
@@ -276,8 +296,21 @@ class MainHandler(webapp2.RequestHandler):
 class DemoPage(webapp2.RequestHandler):
 	def get(self):
 		loadHeader(self,'Demo Page');
+		
+		requestUrl = self.request.uri;
+		
+		chatServerUrlIndex = requestUrl.index('demo');
+		
+		chatServerUrl = requestUrl[0:chatServerUrlIndex];
+		
+		
+		template_values = {
+								
+								'chatServerUrl':chatServerUrl,
+						}
+
 		path = os.path.join(os.path.dirname(__file__), "templates/demo.html")
-		self.response.out.write(template.render(path, {}));
+		self.response.out.write(template.render(path, template_values));
 		loadFooter(self);
 
 
@@ -296,6 +329,10 @@ def loadFooter(self):
 	path = os.path.join(os.path.dirname(__file__), "templates/footer.html")
 	self.response.out.write(template.render(path, template_values));	
 
+def hashSiteId(self):
+	siteId =  self.request.get('site_id','default');
+	return hashlib.md5(siteId).hexdigest()
+	
 
 class CreateWidget(webapp2.RequestHandler):
 	def get(self):
@@ -381,6 +418,7 @@ def id_generator(size=6, chars=string.ascii_letters + string.digits):
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/config',ChatJs),
+    ('/oneroom.js',OneRoom),
     ('/widget',ChatWidget),
     ('/demo',DemoPage),
     ('/createWidget',CreateWidget),
