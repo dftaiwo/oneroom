@@ -35,6 +35,9 @@ import random
 import string
 import time
 from libs import xss
+from webapp2_extras import sessions
+
+
 
 				
 def send_client_list(connections):
@@ -67,9 +70,19 @@ def id_generator(size=6, chars=string.ascii_letters + string.digits):
 	return ''.join(random.choice(chars) for _ in range(size))   
 
 
+class ChatUser(ndb.Model):
+    user_id = ndb.StringProperty()
+    user_image = ndb.StringProperty()
+    display_name = ndb.StringProperty()
+    joined = ndb.DateTimeProperty(auto_now_add=True)
+
+
 class Connection(ndb.Model):
-	channel_id = ndb.StringProperty()
+	channel_id = ndb.StringProperty(indexed=True)
 	site_id = ndb.StringProperty(indexed=True)
+	display_name = ndb.StringProperty();
+	user_id = ndb.StringProperty(indexed=True);
+	user_image= ndb.StringProperty();
 	timestamp = ndb.DateTimeProperty(auto_now_add=True)
 
 class Scene(ndb.Model):
@@ -80,16 +93,19 @@ class Scene(ndb.Model):
 	
 class UserMessage(webapp2.RequestHandler):
 	def post(self):
-		currentUser = requireAuth(self);
+		
 		channel_id = self.request.get('channel_id');
 		siteId  = self.request.get('site_id');
 		clientSeq = self.request.get('client_seq');
+		currentUser = getUserInfo(clientSeq);
 		msgTimeStamp = self.request.get('timestamp');
 		msg = self.request.get('msg');
 		
 		xssCleaner = xss.XssCleaner();#get rid of potentially harmful code
 		msg = xssCleaner.strip(msg);
 		
+			
+		#msg="{0} says ".format(currentUser.user_id);
 		logging.info('Received MESSAGE [%s %s]' % (channel_id, clientSeq))
 		sequence = memcache.incr("sequence", initial_value=0)
 		
@@ -124,7 +140,7 @@ class UserMessage(webapp2.RequestHandler):
 					'totalClients':totalClients,
 					'server_time' : int(time.time() * 1000),
 					'site_id':siteId,
-					'senderName': 'Anonymous',#currentUser.nickname()
+					'sender': currentUser
 				});
 		tStart = datetime.now()
 		channel.send_message(channel_id, message)
@@ -162,28 +178,13 @@ class UserConnected(webapp2.RequestHandler):
 	def post(self):
 		client_id = self.request.get('from')
 		logging.info('Received CONNECT from %s' % client_id)
+		clientKey = getClientKey(client_id);
+		scene_k = ndb.Key('Scene', clientKey);
+		pass
 		# inform other clients about the new addition
 		# inform this client about the other clients
-		scene_k = ndb.Key('Scene', 'scene1')
-		scene = scene_k.get()
-		send_client_list(scene.connections)
-
-def requireAuth(self):
-	return;
-# 	argv=["main.py"]
-# 	service, flags = sample_tools.init(
-# 	argv, 'plus', 'v1', __doc__, __file__,
-# 	scope='https://www.googleapis.com/auth/plus.me')
-# 	people_resource = service.people()
-# 	people_document = people_resource.get(userId='me').execute()
-# 	self.response.out.write("Hello");
- 	currentUser = users.get_current_user()
- 	if currentUser:
-  		userId = currentUser.user_id();
-  		memcache.add(key=userId, value=currentUser.nickname(), time=21600);
- 		return currentUser;
- 	else:
- 		self.redirect('/login',False,True)
+# 		scene = scene_k.get()
+# 		send_client_list(scene.connections)
 
 class LoginHandler(webapp2.RequestHandler):
 	def get(self):
@@ -259,10 +260,28 @@ class ChatJs(webapp2.RequestHandler):#this should generate a js file just for th
 		self.response.headers['Content-Type'] = 'application/javascript'
 		self.response.out.write(template.render(path, template_values));
 
+
+def storeUserInfo(userId ,userInfo):
+	
+	memcache.add(key=userId, value=userInfo, time=21600);
+	pass
+
+def getUserInfo(userId):
+	userInfo = memcache.get(userId);
+	logging.info('Logging userinfo')
+	logging.info(userInfo);
+	return userInfo;
+	
+
+
 class RefreshToken(webapp2.RequestHandler):#this should generate a js file just for the specified 'site'
 	def post(self):
 		siteId =  self.request.get('site_id','default');
-		currentUser = requireAuth(self);
+		#currentUser = requireAuth(self);
+		displayName=self.request.get('name','anonymous');
+		userId=self.request.get('user_id',0);
+		userImage=self.request.get('image','/assets/img/avatar-02.svg');
+		
 		channel_id = "";
 		token = "";
 		clientKey = getClientKey(siteId);
@@ -279,7 +298,15 @@ class RefreshToken(webapp2.RequestHandler):#this should generate a js file just 
 
 		channel_id = str(scene.next_id)
 		scene.next_id += 1
-		scene.connections.append(Connection(channel_id=channel_id,site_id=siteId))
+		userInfo = {
+			'id':userId,
+			'name':displayName,
+			'image':userImage
+		}
+		storeUserInfo(userId,userInfo);  
+		
+		scene.connections.append(Connection(channel_id=channel_id,site_id=siteId,display_name=displayName,user_id=userId,user_image=userImage));
+		
 		token = channel.create_channel(channel_id,duration_minutes=30)
 		scene.put()
 		logging.info('MainHandler channel_id=%s' % channel_id)
@@ -288,7 +315,7 @@ class RefreshToken(webapp2.RequestHandler):#this should generate a js file just 
 								'token' : token,
 								'site_id':siteId,
 								'channel_id' : channel_id,
-								'client_seq':channel_id, #currentUser.user_id(),
+								'client_seq':userId, #currentUser.user_id(),
 								'totalClients': len(scene.connections),
 								}
 						}
@@ -300,7 +327,7 @@ class RefreshToken(webapp2.RequestHandler):#this should generate a js file just 
 class MainHandler(webapp2.RequestHandler):
 	
 	def get(self):
- 		currentUser = requireAuth(self);
+ 		
 		
 # 		channel_id = "";
 # 		token = "";

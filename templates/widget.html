@@ -8,13 +8,27 @@
     </head>
     <body>
         <header>
-            <a onclick="minimizeChat(); ">
+            <a onclick="minimizeChat();
+               ">
                 OneRoom
             </a>
         </header>
-        <section id="chatBox">
+        <section id="signInBox">
+            Join the Chat. Sign In to Continue
+            <span id="signinButton">
+                <span
+                    class="g-signin"
+                    data-callback="signinCallback"
+                    data-clientid="688866146784-c6nm0sj9gqqrrn32srg7q0a9dqvhqdg8.apps.googleusercontent.com"
+                    data-cookiepolicy="single_host_origin"
+                    data-immediate="true"
+                    data-scope="https://www.googleapis.com/auth/plus.me">
+                </span>
+            </span>
+        </section>
+        <section id="chatBox" style="display:none;">
             <ul id="chatBoxList">
-                
+               
             </ul>
         </section>
         <footer id="message">
@@ -26,16 +40,27 @@
             <source src="/assets/audio/msg.mp3" type="audio/mpeg">
             <source src="/assets/audio/msg.wav" type="audio/wav">
         </audio>
-        
+
         <!--<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>-->
         <script src="/assets/js/jquery-1.10.2.min.js"></script>
         <script src="/assets/js/jquery-ext.js"></script>
         <script src="/assets/js/chatroom.js"></script>
         <script type="text/javascript" src="/_ah/channel/jsapi"></script>
+        <script type="text/javascript">
+                (function() {
+                    var po = document.createElement('script');
+                    po.type = 'text/javascript';
+                    po.async = true;
+                    po.src = 'https://apis.google.com/js/client:plusone.js?onload=loadGoogleApi';
+                    var s = document.getElementsByTagName('script')[0];
+                    s.parentNode.insertBefore(po, s);
+                })();
+                
+        </script>
         <script>
             var siteIdentifier = '{{ siteId }}';
-            reconnectChannel();
+            //reconnectChannel();
         </script>
-        
+
     </body>
 </html>

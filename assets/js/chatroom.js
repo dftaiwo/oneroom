@@ -1,7 +1,10 @@
 var debugMode = true;
 var outgoingMessages = {};
-var myNickname='Me';
+var myNickname = '-Me-';
+var myMsgNickname = 'Me';//What is displayed in my chat for me
+var plusAuthCompleted = false;
 var isConnected = false;
+var authenticatedUser = false;
 if (typeof (console) == "undefined") {
         window.console = {
                 log: function() {
@@ -27,7 +30,7 @@ var globalChannelParams = {};
 function setChannelParams(channelParams) {
         logMessage("Setting channel Params", channelParams);
         globalChannelParams = channelParams;
-        if(channelParams.myNickname){
+        if (channelParams.myNickname) {
                 myNickname = channelParams.myNickname;
         }
 }
@@ -45,7 +48,7 @@ function connectChannel() {
                 onopen: function() {
                         connected = true;
                         logMessage("===============================================");
-                        logMessage("Connected to [" +getChannelId() + "]");
+                        logMessage("Connected to [" + getChannelId() + "]");
                         setConnectionStatus(true);
                 },
                 onmessage: function(msg) {
@@ -117,8 +120,8 @@ function handleClientList(msg) {
 
 function logMessage(msg, msg2) {
         if (typeof (msg2) == 'undefined') {
-                msg2='';
-                
+                msg2 = '';
+
         }
         console.log(msg, msg2);
 }
@@ -126,7 +129,7 @@ function logMessage(msg, msg2) {
 
 
 $('#textMessage').pressEnter(function() {
-        if(!isConnected){
+        if (!isConnected) {
                 //showMessage("Disconnected. Click Ok to reconnect");
                 reconnectChannel();
                 return;
@@ -140,15 +143,15 @@ $('#textMessage').pressEnter(function() {
         var msgTimeStamp = getTimestamp();
         var messageData = {
                 msg: messageToSend,
-                senderName: myNickname,
-                site_id:getSiteId(),
+                sender: authenticatedUser,
+                site_id: getSiteId(),
         }
-        addMessageToChat(messageData, msgTimeStamp);
+        addMessageToChat(messageData, msgTimeStamp,'Me');
         sendToServer(messageToSend, msgTimeStamp);
 
 });
 
-function addMessageToChat(messageData, msgTimeStamp) {
+function addMessageToChat(messageData, msgTimeStamp,forcedSender) {
 
 
         var htmlToView = [];
@@ -159,11 +162,20 @@ function addMessageToChat(messageData, msgTimeStamp) {
         } else {//This came from me
                 htmlToView.push('<li class="pending" id="msg' + msgTimeStamp + '">');
         }
-        htmlToView.push('<img src="/assets/img/avatar-02.svg" align="left" />');
-        htmlToView.push(message);
+        if(typeof(messageData.sender.image)=='undefined'){
+                htmlToView.push('<img src="/assets/img/avatar-02.svg" align="left" />');
+        }else{
+                htmlToView.push('<img src="'+messageData.sender.image+'" align="left" />');
+        }
         htmlToView.push('<author>');
-        htmlToView.push(messageData.senderName);
+        if(typeof(forcedSender)=='undefined'){
+                htmlToView.push(messageData.sender.name);
+        }else{
+                htmlToView.push(forcedSender);
+        }
         htmlToView.push('</author>');
+        htmlToView.push(message);
+        
         htmlToView.push('<span></span>');
         htmlToView.push('</li>');
 
@@ -183,12 +195,12 @@ function playChatSound() {
 
 function sendToServer(messageToSend, msgTimeStamp) {
 //        outgoingMessages.append(messageToSend);
-        
+
         var requestParams = {
                 channel_id: getChannelId(),
                 client_seq: getClientSeq(),
                 timestamp: msgTimeStamp,
-                site_id:getSiteId(), 
+                site_id: getSiteId(),
                 msg: messageToSend
         }
 
@@ -217,9 +229,19 @@ function getTimestamp() {
 
 
 function reconnectChannel() {
+        if (!authenticatedUser) {
+                logMessage('authenticatedUser', ' is false, so we will not connect');
+                return;
+        }
         //needs to get a fresh token, then connect
         logMessage("Trying to reconnect to Server");
-        var requestParams = {'site_id': siteIdentifier}
+        var requestParams = {
+                site_id: siteIdentifier,
+                user_id: authenticatedUser.id,
+                name: authenticatedUser.name,
+                image: authenticatedUser.image,
+        }
+
         $.ajax({
                 url: "/refreshToken",
                 type: "POST",
@@ -232,7 +254,7 @@ function reconnectChannel() {
                                 channelToken: data.result.token,
                                 channelId: data.result.channel_id,
                                 clientSeq: data.result.client_seq,
-                                siteId:data.result.site_id
+                                siteId: data.result.site_id
                         }
                         siteIdentifier = data.result.site_id;
                         setChannelParams(channelParams);
@@ -250,24 +272,95 @@ function reconnectChannel() {
 
 }
 
-function getChannelId(){
+function getChannelId() {
         channelParams = getChannelParams();
         return channelParams.channelId;
 }
-function getClientSeq(){
+function getClientSeq() {
         channelParams = getChannelParams();
         return channelParams.clientSeq;
 }
-function getSiteId(){
+function getSiteId() {
         channelParams = getChannelParams();
         return channelParams.siteId;
 }
 
-function setConnectionStatus(status){
+function setConnectionStatus(status) {
         isConnected = status;
 }
 
-function showMessage(msg){
+function showMessage(msg) {
         alert(msg);
 }
 
+function loadGoogleApi() {
+        gapi.client.load('plus', 'v1', getUserInfo);
+        console.log('lading');
+}
+
+function signinCallback(authResult) {
+        console.log(authResult);
+        if (authResult['status']['signed_in']) {
+
+                $('#signInBox').hide();
+
+                $('#chatBox').show();
+
+                plusAuthCompleted = true;
+
+        } else {
+                // Update the app to reflect a signed out user
+                // Possible error values:
+                //   "user_signed_out" - User is signed-out
+                //   "access_denied" - User denied access to your app
+                //   "immediate_failed" - Could not automatically log in the user
+                console.log('Sign-in state: ' + authResult['error']);
+                switch(authResult['error']){
+                        case 'access_denied':
+                                showMessage("We had a little difficulty signing you in. Please click on 'Sign-In' to try again");
+                                break;
+                        case 'immediate_failed':
+                        default:
+
+                }
+                
+        }
+}
+
+
+function getUserInfo() {
+        if (!plusAuthCompleted) {
+                window.setTimeout(
+                        function() {
+                                getUserInfo()
+                        }
+                , 500);
+                return;
+
+        }
+        gapi.client.plus.people.get({userId: 'me'}).execute(handleUserInfo);
+}
+
+function handleUserInfo(userInfo) {
+        if(!userInfo) return;
+        var htmlToView = [];
+        htmlToView.push('<li>');
+        htmlToView.push('Welcome, ');
+        htmlToView.push(userInfo.displayName);
+        htmlToView.push('! <br /><br />');
+        htmlToView.push('You are in this chat room.');
+        htmlToView.push('</li>');
+        $('#chatBoxList').append(htmlToView.join("\n"));
+        
+        console.log(authenticatedUser);
+        authenticatedUser = {
+                name: userInfo.displayName,
+                id: userInfo.id,
+                image: userInfo.image.url
+        }
+
+        myNickname = authenticatedUser.name;
+
+        reconnectChannel();
+
+}
